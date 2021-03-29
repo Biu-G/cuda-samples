@@ -32,7 +32,7 @@
 ################################################################################
 
 # Location of the CUDA Toolkit
-CUDA_PATH ?= /usr/local/cuda
+CUDA_PATH ?= /opt/rocm/hip
 
 ##############################
 # start deprecated interface #
@@ -156,8 +156,8 @@ else ifneq ($(TARGET_ARCH),$(HOST_ARCH))
         HOST_COMPILER ?= powerpc64le-linux-gnu-g++
     endif
 endif
-HOST_COMPILER ?= g++
-NVCC          := $(CUDA_PATH)/bin/nvcc -ccbin $(HOST_COMPILER)
+#HOST_COMPILER ?= g++
+NVCC          := $(CUDA_PATH)/bin/hipcc $(HOST_COMPILER)
 
 # internal flags
 NVCCFLAGS   := -m${TARGET_SIZE}
@@ -166,7 +166,7 @@ LDFLAGS     :=
 
 # build flags
 ifeq ($(TARGET_OS),darwin)
-    LDFLAGS += -rpath $(CUDA_PATH)/lib
+    LDFLAGS += -rpath $(HIP_PATH)/lib
     CCFLAGS += -arch $(HOST_ARCH)
 else ifeq ($(HOST_ARCH)-$(TARGET_ARCH)-$(TARGET_OS),x86_64-armv7l-linux)
     LDFLAGS += --dynamic-linker=/lib/ld-linux-armhf.so.3
@@ -290,16 +290,16 @@ endif
 
 ifeq ($(GENCODE_FLAGS),)
 # Generate SASS code for each SM architecture listed in $(SMS)
-$(foreach sm,$(SMS),$(eval GENCODE_FLAGS += -gencode arch=compute_$(sm),code=sm_$(sm)))
+#$(foreach sm,$(SMS),$(eval GENCODE_FLAGS +=  arch=compute_$(sm),code=sm_$(sm)))
 
 # Generate PTX code from the highest SM architecture in $(SMS) to guarantee forward-compatibility
 HIGHEST_SM := $(lastword $(sort $(SMS)))
 ifneq ($(HIGHEST_SM),)
-GENCODE_FLAGS += -gencode arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
+#GENCODE_FLAGS +=  arch=compute_$(HIGHEST_SM),code=compute_$(HIGHEST_SM)
 endif
 endif
 
-ALL_CCFLAGS += --threads 0
+#ALL_CCFLAGS += -mthreads 0
 
 ifeq ($(SAMPLE_ENABLED),0)
 EXEC ?= @echo "[@]"
@@ -319,7 +319,7 @@ else
 	@echo "Sample is ready - all dependencies have been met"
 endif
 
-matrixMul.o:matrixMul.cu
+matrixMul.o:matrixMul.cu.hip
 	$(EXEC) $(NVCC) $(INCLUDES) $(ALL_CCFLAGS) $(GENCODE_FLAGS) -o $@ -c $<
 
 matrixMul: matrixMul.o
